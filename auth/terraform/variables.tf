@@ -4,6 +4,6 @@ variable "NAME" {
 }
 
 variable "STAGE" {
-  type    = string
-  default = "Name of the stage to deploy to (not supported yet)."
+  type        = string
+  description = "Name of the stage to deploy to (not supported yet)."
 }

@@ -15,6 +15,8 @@ provider "aws" {
   region = "eu-central-1"
 
   default_tags {
-    component = var.NAME
+    tags = {
+      component = var.NAME
+    }
   }
 }
