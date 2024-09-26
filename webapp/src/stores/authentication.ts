@@ -1,12 +1,16 @@
-import { defineStore } from 'pinia';
-import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand } from "@aws-sdk/client-cognito-identity-provider";
-import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
-import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
+import {defineStore} from 'pinia';
+import {
+  CognitoIdentityProviderClient,
+  InitiateAuthCommand,
+  RespondToAuthChallengeCommand
+} from "@aws-sdk/client-cognito-identity-provider";
+import {fromCognitoIdentityPool} from "@aws-sdk/credential-providers";
+import {CognitoIdentityClient} from "@aws-sdk/client-cognito-identity";
+import {CognitoIdentityCredentialProvider} from "@aws-sdk/credential-provider-cognito-identity";
 
 // Define the state interface
 interface AuthenticationState {
-  credentials: any | null;
-  cognitoUser: any | null;
+  credentials: CognitoIdentityCredentialProvider | null;
 }
 
 const region = 'eu-central-1';
@@ -14,14 +18,27 @@ const userPoolId = 'eu-central-1_IkkWGO43K';
 const clientId = '7fqgppuj672kml4qnf1f4070i1';
 const identityPoolId = 'eu-central-1:2dcd9a5a-979e-4bce-8aa1-fad00c666883';
 
-const cognitoClient = new CognitoIdentityProviderClient({ region });
+const localStorageIDToken = `cognito-idp.${region}.amazonaws.com/${userPoolId}`
+
+const cognitoClient = new CognitoIdentityProviderClient({region});
+
+const parseIDToken = (idToken: string) => {
+  if (!idToken) {
+    return null;
+  }
+  return fromCognitoIdentityPool({
+    client: new CognitoIdentityClient({region}),
+    identityPoolId,
+    logins: {
+      [localStorageIDToken]: idToken,
+    },
+  });
+}
 
 export const useAuthenticationStore = defineStore('authentication', {
   state: (): AuthenticationState => ({
-    credentials: null,
-    cognitoUser: null,
+    credentials: parseIDToken(localStorage.getItem(localStorageIDToken)),
   }),
-
   actions: {
     async login(username: string, password: string): Promise<void> {
       const that = this;
@@ -59,14 +76,11 @@ export const useAuthenticationStore = defineStore('authentication', {
           // Extract token
           const idToken = authResult.AuthenticationResult.IdToken;
 
+          // persist ID token
+          localStorage.setItem(localStorageIDToken, idToken)
+
           // Step 2: Set credentials using AWS SDK v3
-          that.credentials = fromCognitoIdentityPool({
-            client: new CognitoIdentityClient({ region }),
-            identityPoolId,
-            logins: {
-              [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: idToken,
-            },
-          });
+          that.credentials = parseIDToken(idToken);
 
           console.log('Credentials set:', that.credentials);
         }
@@ -79,19 +93,13 @@ export const useAuthenticationStore = defineStore('authentication', {
     logout(): void {
       // Sign out logic (you may need to implement additional actions)
       this.credentials = null;
-      this.cognitoUser = null;
       console.log('User signed out');
     },
   },
 
   getters: {
     isAuthenticated: (state: AuthenticationState): boolean => {
-      if (state.credentials === null) {
-        return false;
-      }
-      // Check if the credentials are valid (AWS SDK v3 doesn't use `expired` like v2)
-      // You might need to implement custom logic here for validity checking
-      return true;
+      return state.credentials !== null;
     },
   },
 });
