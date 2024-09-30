@@ -76,12 +76,7 @@ resource "aws_iam_role_policy" "authenticated_policy" {
       {
         Action = ["s3:ListBucket"],
         Effect   = "Allow",
-        Resource = "arn:aws:s3:::your-bucket-name"
-      },
-      {
-        Action = ["s3:GetObject", "s3:PutObject"],
-        Effect   = "Allow",
-        Resource = "arn:aws:s3:::your-bucket-name/*"
+        Resource = "*"
       }
     ]
   })
