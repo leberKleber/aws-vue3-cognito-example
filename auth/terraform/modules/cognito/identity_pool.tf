@@ -74,7 +74,7 @@ resource "aws_iam_role_policy" "authenticated_policy" {
     Version = "2012-10-17",
     Statement = [
       {
-        Action = ["s3:ListBucket"],
+        Action = ["appsync:ListGraphqlApis"],
         Effect   = "Allow",
         Resource = "*"
       }
